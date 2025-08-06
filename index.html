@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo Feira do Bom Fim</title>
+    <title>Catálogo da Feira</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome for icons -->
@@ -137,9 +137,16 @@
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
         </div>
         
-        <!-- Grouping -->
-        <div class="flex items-center justify-start gap-4">
-            <div>
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+             <!-- Category Filter -->
+            <div class="w-full md:w-auto">
+                <label for="category-filter" class="font-semibold mr-3 text-slate-600">Filtrar por Categoria:</label>
+                <select id="category-filter" class="w-full md:w-64 mt-1 md:mt-0 p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
+                    <option value="all">Todas as Categorias</option>
+                </select>
+            </div>
+            <!-- Grouping -->
+            <div class="w-full md:w-auto">
                 <span class="font-semibold mr-3 text-slate-600">Agrupar por:</span>
                 <div class="inline-flex rounded-md shadow-sm" role="group">
                     <button type="button" id="group-by-categoria" class="group-btn bg-emerald-600 text-white px-4 py-2 text-sm font-medium border border-emerald-700 rounded-l-lg hover:bg-emerald-700">
@@ -285,6 +292,7 @@
             // --- DOM ELEMENTS ---
             const productListContainer = document.getElementById('product-list');
             const searchInput = document.getElementById('search-input');
+            const categoryFilter = document.getElementById('category-filter');
             const groupByCategoriaBtn = document.getElementById('group-by-categoria');
             const groupByBancaBtn = document.getElementById('group-by-banca');
             const loadingSpinner = document.getElementById('loading-spinner');
@@ -367,6 +375,11 @@
                         if (!line.trim()) return null;
                         const values = parseCsvLine(line);
                         
+                        if (values.length !== headers.length) {
+                             console.warn(`Row ${index + 2} has mismatched columns. Skipping.`, { line, values, headers });
+                             return null;
+                        }
+
                         const product = headers.reduce((obj, header, i) => {
                             obj[header] = values[i] ? values[i].trim() : '';
                             return obj;
@@ -375,7 +388,6 @@
                         product.id = `prod_${index}`;
                         product.preco_venda = parseFloat(String(product.preco_venda).replace(',', '.')) || 0;
                         
-                        // Logic for allergen tags based on "Não contém"
                         product.show_tag_gluten = String(product['contem_gluten']).toLowerCase().trim() === 'não contém';
                         product.show_tag_lactose = String(product['contem_lactose']).toLowerCase().trim() === 'não contém';
                         product.show_tag_soja = String(product['contem_soja']).toLowerCase().trim() === 'não contém';
@@ -388,7 +400,8 @@
 
                         return product;
                     }).filter(p => p && String(p.situacao).toLowerCase() === 'ativo' && p.produto); 
-
+                    
+                    populateCategoryFilter();
                     renderProducts();
                 } catch (error) {
                     console.error('Falha ao carregar os dados:', error);
@@ -397,13 +410,28 @@
                     loadingSpinner.style.display = 'none';
                 }
             }
+            
+            function populateCategoryFilter() {
+                const categories = [...new Set(allProducts.map(p => p.categoria))].sort();
+                categories.forEach(category => {
+                    if (category) {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categoryFilter.appendChild(option);
+                    }
+                });
+            }
 
             // --- RENDERING ---
             function renderProducts() {
                 const searchTerm = searchInput.value.toLowerCase();
+                const selectedCategory = categoryFilter.value;
                 
                 const filteredProducts = allProducts.filter(p => {
-                    return p.produto.toLowerCase().includes(searchTerm);
+                    const categoryMatch = selectedCategory === 'all' || p.categoria === selectedCategory;
+                    const searchMatch = p.produto.toLowerCase().includes(searchTerm);
+                    return categoryMatch && searchMatch;
                 });
 
                 const grouped = filteredProducts.reduce((acc, p) => {
@@ -440,9 +468,9 @@
                 const measure = `${p.medida} ${p.unidade_medida}`.trim();
 
                 const allergenTags = `
-                    ${p.show_tag_gluten ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Glúten</span>' : ''}
-                    ${p.show_tag_lactose ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Lactose</span>' : ''}
-                    ${p.show_tag_soja ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Soja</span>' : ''}
+                    ${p.show_tag_gluten ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Sem glúten</span>' : ''}
+                    ${p.show_tag_lactose ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Sem lactose</span>' : ''}
+                    ${p.show_tag_soja ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Sem soja</span>' : ''}
                 `;
 
                 const imageSection = p.images.length > 0
@@ -468,15 +496,15 @@
                     <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col overflow-hidden">
                         <div class="product-card-clickable cursor-pointer" data-product-id="${p.id}">
                             ${imageSection}
-                            <div class="p-4 flex-grow">
-                                <h3 class="text-lg font-bold text-slate-800 whitespace-normal leading-tight">${p.produto}</h3>
+                            <div class="p-3 flex-grow">
+                                <h3 class="text-base font-bold text-slate-800 whitespace-normal leading-tight">${p.produto}</h3>
                                 <p class="text-slate-500 text-sm">${measure}</p>
                                 ${allergenTags.trim() ? `<div class="mt-2">${allergenTags}</div>` : ''}
                             </div>
                         </div>
-                        <div class="p-4 border-t mt-auto">
+                        <div class="p-3 border-t mt-auto">
                             <div class="flex justify-between items-center">
-                                <p class="text-xl font-bold text-emerald-600">${priceFormatted}</p>
+                                <p class="text-lg font-bold text-emerald-600">${priceFormatted}</p>
                                 <div class="cart-controls" data-product-id="${p.id}">${cartControlsHTML}</div>
                             </div>
                         </div>
@@ -869,6 +897,7 @@
 
             // Initial setup of event listeners
             searchInput.addEventListener('input', renderProducts);
+            categoryFilter.addEventListener('change', renderProducts);
             
             groupByCategoriaBtn.addEventListener('click', () => {
                 currentGrouping = 'categoria';
