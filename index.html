@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Feira do Bom Fim</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles to complement Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+        /* Carousel styles */
+        .carousel-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .carousel-slide {
+            display: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .carousel-slide.active {
+            display: block;
+        }
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            z-index: 10;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .carousel-btn:hover {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .carousel-btn.prev {
+            left: 8px;
+        }
+        .carousel-btn.next {
+            right: 8px;
+        }
+        /* Animation for modals and sidebars */
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .fade-out {
+            animation: fadeOut 0.3s ease-in;
+        }
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        .slide-out-right {
+            animation: slideOutRight 0.3s ease-in;
+        }
+        /* Sticky title for product groups */
+        .sticky-title {
+            position: sticky;
+            top: 76px; /* Increased from 68px for more space */
+            background-color: #f8fafc; /* Match body background */
+            z-index: 20; /* Below header (z-30) but above cards */
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes slideOutRight {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); }
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="fixed inset-0 bg-white/80 z-50 flex flex-col items-center justify-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-emerald-600"></i>
+        <p class="mt-4 text-lg text-slate-600">Carregando produtos...</p>
+    </div>
+
+    <!-- Main Header -->
+    <header class="bg-white shadow-md sticky top-0 z-30">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl md:text-3xl font-bold text-emerald-700">
+                <i class="fas fa-leaf mr-2"></i>Catálogo da Feira
+            </h1>
+            <button id="cart-button" class="relative text-slate-600 hover:text-emerald-600 transition-colors">
+                <i class="fas fa-shopping-cart text-2xl"></i>
+                <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Controls Section -->
+    <div class="container mx-auto px-4 py-6">
+        <!-- Search Bar -->
+        <div class="relative mb-4">
+            <input type="text" id="search-input" placeholder="Buscar por nome do produto..." class="w-full p-3 pl-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        </div>
+        
+        <!-- Grouping -->
+        <div class="flex items-center justify-start gap-4">
+            <div>
+                <span class="font-semibold mr-3 text-slate-600">Agrupar por:</span>
+                <div class="inline-flex rounded-md shadow-sm" role="group">
+                    <button type="button" id="group-by-categoria" class="group-btn bg-emerald-600 text-white px-4 py-2 text-sm font-medium border border-emerald-700 rounded-l-lg hover:bg-emerald-700">
+                        Categoria
+                    </button>
+                    <button type="button" id="group-by-banca" class="group-btn bg-white text-slate-700 px-4 py-2 text-sm font-medium border-t border-b border-r border-slate-300 rounded-r-lg hover:bg-slate-100">
+                        Banca
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product List -->
+    <main id="product-list" class="container mx-auto px-4 pb-16">
+        <!-- Products will be injected here by JavaScript -->
+    </main>
+    
+    <footer class="bg-slate-800 text-slate-300 py-8">
+        <div class="container mx-auto px-4 text-center text-sm space-y-2">
+            <p>Faça seus pedidos até às 18h da quinta-feira anterior a feira.</p>
+            <p>Formas de pagamento: transferência bancária, PIX, dinheiro e PicPay.</p>
+            <p>Nossas entregas ocorrem em Porto Alegre no sábado das 8:30 às 12:30.</p>
+            <p>Se preferir, faça sua reserva e retire na feira: sábado, das 7h às 11h.</p>
+            <p class="font-bold mt-2">Aceitamos reserva somente dos itens da Pérola da Terra 😉</p>
+            <div class="mt-4 pt-4 border-t border-slate-700 text-slate-400">
+                <p>Bancas 163 e 165 - Feira Ecológica do Bom Fim</p>
+                <p>Rua Jose Bonifácio, altura do número 505, em Porto Alegre (lado esquerdo de quem vem da Av. Oswaldo Aranha).</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Product Detail Modal -->
+    <div id="product-modal" class="fixed inset-0 bg-black bg-opacity-60 z-40 flex items-center justify-center p-4 hidden">
+        <div id="modal-content" class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative fade-in">
+            <!-- Content will be injected here -->
+        </div>
+    </div>
+    
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative fade-in">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h2 class="text-xl font-bold text-slate-800">Informações Importantes</h2>
+                <button id="info-modal-close-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </div>
+            <div class="p-6 space-y-3 text-slate-700">
+                 <p><i class="fas fa-clock mr-2 text-emerald-600 w-5 text-center"></i>Faça seus pedidos até às <strong>18h da quinta-feira</strong> anterior a feira.</p>
+                <p><i class="fas fa-credit-card mr-2 text-emerald-600 w-5 text-center"></i>Formas de pagamento: transferência bancária, PIX, dinheiro e PicPay.</p>
+                <p><i class="fas fa-truck mr-2 text-emerald-600 w-5 text-center"></i>Nossas entregas ocorrem em Porto Alegre no <strong>sábado das 8:30 às 12:30</strong>.</p>
+                <p><i class="fas fa-shopping-bag mr-2 text-emerald-600 w-5 text-center"></i>Se preferir, faça sua reserva e retire na feira: <strong>sábado, das 7h às 11h</strong>.</p>
+                <p class="font-bold mt-4 pt-4 border-t"><i class="fas fa-star mr-2 text-yellow-500 w-5 text-center"></i>Aceitamos reserva somente dos itens da Pérola da Terra 😉</p>
+                <div class="mt-4 pt-4 border-t text-sm text-slate-500">
+                    <p><i class="fas fa-map-marker-alt mr-2 w-5 text-center"></i><strong>Bancas 163 e 165</strong> - Feira Ecológica do Bom Fim</p>
+                    <p class="pl-7">Rua Jose Bonifácio, altura do nº 505, Porto Alegre (lado esquerdo de quem vem da Av. Oswaldo Aranha).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative fade-in">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h2 class="text-xl font-bold text-slate-800">Finalizar Pedido</h2>
+                <button id="checkout-modal-close-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </div>
+            <form id="checkout-form" class="p-6 space-y-4">
+                <div>
+                    <label for="customer-name" class="block text-sm font-medium text-slate-700">Nome Completo</label>
+                    <input type="text" id="customer-name" name="customer-name" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label for="customer-phone" class="block text-sm font-medium text-slate-700">Telefone (com DDD)</label>
+                    <input type="tel" id="customer-phone" name="customer-phone" required placeholder="51912345678" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">Opção de Entrega</label>
+                    <div class="mt-2 space-y-2">
+                        <label id="retirada-option-label" class="flex items-center">
+                            <input type="radio" name="delivery-option" value="retirada" checked class="h-4 w-4 text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                            <span class="ml-2 text-sm text-slate-700">Vou retirar na banca</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input id="tele-entrega-radio" type="radio" name="delivery-option" value="tele-entrega" class="h-4 w-4 text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                            <span class="ml-2 text-sm text-slate-700">Quero tele-entrega (consultar taxa)</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="pickup-person-container" class="transition-all">
+                    <label for="pickup-person-name" class="block text-sm font-medium text-slate-700">Nome de quem vai retirar (opcional)</label>
+                    <input type="text" id="pickup-person-name" name="pickup-person-name" placeholder="Deixe em branco se for você" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div>
+                    <label for="payment-method" class="block text-sm font-medium text-slate-700">Forma de Pagamento</label>
+                    <select id="payment-method" name="payment-method" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-md">
+                        <option>Pix</option>
+                        <option>Cartão de Crédito</option>
+                        <option>Cartão de Débito</option>
+                        <option>Dinheiro</option>
+                    </select>
+                </div>
+                <div class="pt-4">
+                     <button type="submit" id="confirm-checkout-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+                        <i class="fab fa-whatsapp text-xl"></i>
+                        Confirmar e Enviar Pedido
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Shopping Cart Sidebar -->
+    <div id="cart-sidebar" class="fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300">
+        <div class="flex flex-col h-full">
+            <!-- Cart Header -->
+            <div class="flex justify-between items-center p-4 border-b">
+                <h2 class="text-xl font-bold text-slate-800">Meu Carrinho</h2>
+                <button id="cart-close-btn" class="text-slate-500 hover:text-slate-800 text-2xl">&times;</button>
+            </div>
+            <!-- Cart Items -->
+            <div id="cart-items" class="flex-grow p-4 overflow-y-auto">
+                <!-- Cart items will be injected here -->
+                <p id="cart-empty-msg" class="text-slate-500 text-center mt-8">Seu carrinho está vazio.</p>
+            </div>
+            <!-- Cart Footer -->
+            <div class="p-4 border-t bg-slate-50">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-lg font-semibold">Total:</span>
+                    <span id="cart-total" class="text-xl font-bold text-emerald-700">R$ 0,00</span>
+                </div>
+                <button id="checkout-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Finalizar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM ELEMENTS ---
+            const productListContainer = document.getElementById('product-list');
+            const searchInput = document.getElementById('search-input');
+            const groupByCategoriaBtn = document.getElementById('group-by-categoria');
+            const groupByBancaBtn = document.getElementById('group-by-banca');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            
+            // Modal elements
+            const productModal = document.getElementById('product-modal');
+            const modalContent = document.getElementById('modal-content');
+            const infoModal = document.getElementById('info-modal');
+            const infoModalCloseBtn = document.getElementById('info-modal-close-btn');
+
+            // Cart elements
+            const cartButton = document.getElementById('cart-button');
+            const cartSidebar = document.getElementById('cart-sidebar');
+            const cartCloseBtn = document.getElementById('cart-close-btn');
+            const cartCount = document.getElementById('cart-count');
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartEmptyMsg = document.getElementById('cart-empty-msg');
+            const cartTotalEl = document.getElementById('cart-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+            
+            // Checkout Modal elements
+            const checkoutModal = document.getElementById('checkout-modal');
+            const checkoutModalCloseBtn = document.getElementById('checkout-modal-close-btn');
+            const checkoutForm = document.getElementById('checkout-form');
+            const pickupPersonContainer = document.getElementById('pickup-person-container');
+            const deliveryOptionRadios = document.querySelectorAll('input[name="delivery-option"]');
+            const retiradaOptionLabel = document.getElementById('retirada-option-label');
+            const teleEntregaRadio = document.getElementById('tele-entrega-radio');
+
+            // --- STATE ---
+            let allProducts = [];
+            let cart = {}; // { productId: quantity }
+            let currentGrouping = 'categoria'; // 'categoria' or 'banca'
+            
+            const WHATSAPP_NUMBER = '5551983017175';
+            const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTIjPqKK4k4nKEKzZUDGcmYaIPYuCRWz-wr0s05qY954oL9uBSDn0nvTDDmRzb9SEmObUWfuhBcYFae/pub?gid=0&single=true&output=csv';
+
+            // --- DATA FETCHING & PARSING ---
+            function parseCsvLine(line) {
+                const values = [];
+                let currentField = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (inQuotes) {
+                        if (char === '"') {
+                            if (i + 1 < line.length && line[i + 1] === '"') {
+                                currentField += '"';
+                                i++;
+                            } else {
+                                inQuotes = false;
+                            }
+                        } else {
+                            currentField += char;
+                        }
+                    } else {
+                        if (char === '"') {
+                            inQuotes = true;
+                        } else if (char === ',') {
+                            values.push(currentField);
+                            currentField = '';
+                        } else {
+                            currentField += char;
+                        }
+                    }
+                }
+                values.push(currentField);
+                return values;
+            }
+
+            async function fetchAndParseData() {
+                try {
+                    const response = await fetch(CSV_URL);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const csvText = await response.text();
+                    const lines = csvText.trim().split(/\r?\n/);
+                    const headers = parseCsvLine(lines[0]).map(h => h.trim().toLowerCase()); // Use headers
+                    
+                    allProducts = lines.slice(1).map((line, index) => {
+                        if (!line.trim()) return null;
+                        const values = parseCsvLine(line);
+                        
+                        const product = headers.reduce((obj, header, i) => {
+                            obj[header] = values[i] ? values[i].trim() : '';
+                            return obj;
+                        }, {});
+
+                        product.id = `prod_${index}`;
+                        product.preco_venda = parseFloat(String(product.preco_venda).replace(',', '.')) || 0;
+                        
+                        // Logic for allergen tags based on "Não contém"
+                        product.show_tag_gluten = String(product['contem_gluten']).toLowerCase().trim() === 'não contém';
+                        product.show_tag_lactose = String(product['contem_lactose']).toLowerCase().trim() === 'não contém';
+                        product.show_tag_soja = String(product['contem_soja']).toLowerCase().trim() === 'não contém';
+                        
+                        product.images = [
+                            product['imagem_1'],
+                            product['imagem_2'],
+                            product['imagem_3']
+                        ].filter(url => url && typeof url === 'string' && url.startsWith('http'));
+
+                        return product;
+                    }).filter(p => p && String(p.situacao).toLowerCase() === 'ativo' && p.produto); 
+
+                    renderProducts();
+                } catch (error) {
+                    console.error('Falha ao carregar os dados:', error);
+                    productListContainer.innerHTML = `<p class="text-center text-red-500">Não foi possível carregar os produtos. Verifique o link da planilha e a sua estrutura.</p>`;
+                } finally {
+                    loadingSpinner.style.display = 'none';
+                }
+            }
+
+            // --- RENDERING ---
+            function renderProducts() {
+                const searchTerm = searchInput.value.toLowerCase();
+                
+                const filteredProducts = allProducts.filter(p => {
+                    return p.produto.toLowerCase().includes(searchTerm);
+                });
+
+                const grouped = filteredProducts.reduce((acc, p) => {
+                    const key = p[currentGrouping] || 'Outros';
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(p);
+                    return acc;
+                }, {});
+                
+                productListContainer.innerHTML = '';
+                if (Object.keys(grouped).length === 0) {
+                    productListContainer.innerHTML = `<p class="text-center text-slate-500 mt-8">Nenhum produto encontrado.</p>`;
+                    return;
+                }
+
+                const sortedGroups = Object.keys(grouped).sort();
+                for (const groupName of sortedGroups) {
+                    const groupContainer = document.createElement('div');
+                    groupContainer.className = 'mb-10';
+                    groupContainer.innerHTML = `
+                        <h2 class="sticky-title text-2xl font-bold text-slate-700 border-b-2 border-emerald-500 py-2 mb-6">${groupName}</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            ${grouped[groupName].map(createProductCardHTML).join('')}
+                        </div>
+                    `;
+                    productListContainer.appendChild(groupContainer);
+                }
+                
+                addCardEventListeners();
+            }
+
+            function createProductCardHTML(p) {
+                const priceFormatted = p.preco_venda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const measure = `${p.medida} ${p.unidade_medida}`.trim();
+
+                const allergenTags = `
+                    ${p.show_tag_gluten ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Glúten</span>' : ''}
+                    ${p.show_tag_lactose ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Lactose</span>' : ''}
+                    ${p.show_tag_soja ? '<span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded-full">Não Contém Soja</span>' : ''}
+                `;
+
+                const imageSection = p.images.length > 0
+                    ? createCarouselHTML(p.id, p.images)
+                    : `<div class="aspect-square w-full bg-slate-200 rounded-t-lg flex items-center justify-center text-slate-400"><i class="fas fa-image text-4xl"></i></div>`;
+
+                const quantityInCart = cart[p.id] || 0;
+                const cartControlsHTML = quantityInCart > 0
+                    ? `
+                        <div class="flex items-center gap-3">
+                            <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-8 h-8 rounded-lg transition-colors flex items-center justify-center" data-product-id="${p.id}" data-action="decrease">-</button>
+                            <span class="font-bold text-lg w-5 text-center">${quantityInCart}</span>
+                            <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-8 h-8 rounded-lg transition-colors flex items-center justify-center" data-product-id="${p.id}" data-action="increase">+</button>
+                        </div>
+                    `
+                    : `
+                        <button class="add-to-cart-btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg transition-colors" data-product-id="${p.id}">
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    `;
+
+                return `
+                    <div class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col overflow-hidden">
+                        <div class="product-card-clickable cursor-pointer" data-product-id="${p.id}">
+                            ${imageSection}
+                            <div class="p-4 flex-grow">
+                                <h3 class="text-lg font-bold text-slate-800 whitespace-normal leading-tight">${p.produto}</h3>
+                                <p class="text-slate-500 text-sm">${measure}</p>
+                                ${allergenTags.trim() ? `<div class="mt-2">${allergenTags}</div>` : ''}
+                            </div>
+                        </div>
+                        <div class="p-4 border-t mt-auto">
+                            <div class="flex justify-between items-center">
+                                <p class="text-xl font-bold text-emerald-600">${priceFormatted}</p>
+                                <div class="cart-controls" data-product-id="${p.id}">${cartControlsHTML}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function createCarouselHTML(productId, images) {
+                if (images.length === 1) {
+                    return `<img src="${images[0]}" alt="Imagem do produto" class="aspect-square w-full object-cover rounded-t-lg" onerror="this.parentElement.innerHTML = '<div class=\\'aspect-square w-full bg-slate-200 rounded-t-lg flex items-center justify-center text-slate-400\\'><i class=\\'fas fa-image text-4xl\\'></i></div>';">`;
+                }
+                const slides = images.map((img, index) => `
+                    <div class="carousel-slide ${index === 0 ? 'active' : ''}">
+                        <img src="${img}" alt="Imagem do produto ${index + 1}" class="aspect-square w-full object-cover" onerror="this.parentElement.style.display='none'">
+                    </div>
+                `).join('');
+                return `
+                    <div class="carousel-container rounded-t-lg" data-carousel-id="${productId}">
+                        ${slides}
+                        <button class="carousel-btn prev" data-action="prev"><i class="fas fa-chevron-left"></i></button>
+                        <button class="carousel-btn next" data-action="next"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                `;
+            }
+
+            // --- MODAL LOGIC ---
+            function openProductModal(productId) {
+                const product = allProducts.find(p => p.id === productId);
+                if (!product) return;
+
+                const priceFormatted = product.preco_venda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const measure = `${product.medida} ${product.unidade_medida}`.trim();
+                const ingredientsList = product.ingredientes ? product.ingredientes.split(';').map(i => `<li class="list-none">${i.trim()}</li>`).join('') : '<li>Não informado.</li>';
+
+                modalContent.innerHTML = `
+                    <button id="modal-close-btn-inner" class="absolute top-3 right-4 text-slate-500 hover:text-slate-800 text-2xl z-20">&times;</button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="p-4">
+                           ${createCarouselHTML('modal-' + product.id, product.images)}
+                        </div>
+                        <div class="p-4 md:p-6 flex flex-col">
+                            <h2 class="text-3xl font-bold mb-2">${product.produto}</h2>
+                            <p class="text-slate-500 mb-4">${measure}</p>
+                            <p class="text-3xl font-bold text-emerald-600 mb-6">${priceFormatted}</p>
+                            
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-lg mb-2">Descrição</h4>
+                                <p class="text-slate-600">${product.descricao || 'Nenhuma descrição disponível.'}</p>
+                            </div>
+
+                            <div class="mb-6">
+                                <h4 class="font-semibold text-lg mb-2">Ingredientes</h4>
+                                <ul class="text-slate-600">${ingredientsList}</ul>
+                            </div>
+
+                            <div class="mt-auto cart-controls" data-product-id="${product.id}">
+                                 ${ cart[product.id] > 0 ? `
+                                    <div class="flex items-center justify-center gap-4">
+                                        <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-12 h-12 rounded-lg transition-colors flex items-center justify-center text-2xl" data-product-id="${product.id}" data-action="decrease">-</button>
+                                        <span class="font-bold text-3xl w-10 text-center">${cart[product.id]}</span>
+                                        <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-12 h-12 rounded-lg transition-colors flex items-center justify-center text-2xl" data-product-id="${product.id}" data-action="increase">+</button>
+                                    </div>` : `
+                                    <button class="add-to-cart-btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-5 rounded-lg transition-colors w-full" data-product-id="${product.id}">
+                                        Adicionar ao Carrinho
+                                    </button>`
+                                 }
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                productModal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                document.getElementById('modal-close-btn-inner').addEventListener('click', closeProductModal);
+                addCardEventListeners('#modal-content');
+            }
+
+            function closeProductModal() {
+                productModal.classList.add('fade-out');
+                setTimeout(() => {
+                    productModal.classList.add('hidden');
+                    productModal.classList.remove('fade-out');
+                    document.body.style.overflow = 'auto';
+                }, 300);
+            }
+
+            // --- CART LOGIC ---
+            function handleCartQuantityChange(productId, action) {
+                const currentQty = cart[productId] || 0;
+                if (action === 'increase') {
+                    cart[productId] = currentQty + 1;
+                } else if (action === 'decrease') {
+                    if (currentQty > 0) {
+                        cart[productId] = currentQty - 1;
+                        if (cart[productId] === 0) {
+                            delete cart[productId];
+                        }
+                    }
+                } else if (action === 'remove') {
+                    delete cart[productId];
+                }
+                updateCart();
+                updateProductCardUI(productId);
+            }
+            
+            function updateProductCardUI(productId) {
+                document.querySelectorAll(`.cart-controls[data-product-id="${productId}"]`).forEach(container => {
+                    const product = allProducts.find(p => p.id === productId);
+                    if (!product) return;
+
+                    const quantityInCart = cart[productId] || 0;
+                    let newHTML;
+
+                    if (container.closest('#product-modal')) { // Modal view
+                         newHTML = quantityInCart > 0 ? `
+                            <div class="flex items-center justify-center gap-4">
+                                <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-12 h-12 rounded-lg transition-colors flex items-center justify-center text-2xl" data-product-id="${product.id}" data-action="decrease">-</button>
+                                <span class="font-bold text-3xl w-10 text-center">${quantityInCart}</span>
+                                <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-12 h-12 rounded-lg transition-colors flex items-center justify-center text-2xl" data-product-id="${product.id}" data-action="increase">+</button>
+                            </div>` : `
+                            <button class="add-to-cart-btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-5 rounded-lg transition-colors w-full" data-product-id="${product.id}">
+                                Adicionar ao Carrinho
+                            </button>`;
+                    } else { // Card view
+                        newHTML = quantityInCart > 0 ? `
+                            <div class="flex items-center gap-3">
+                                <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-8 h-8 rounded-lg transition-colors flex items-center justify-center" data-product-id="${product.id}" data-action="decrease">-</button>
+                                <span class="font-bold text-lg w-5 text-center">${quantityInCart}</span>
+                                <button class="card-quantity-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold w-8 h-8 rounded-lg transition-colors flex items-center justify-center" data-product-id="${product.id}" data-action="increase">+</button>
+                            </div>` : `
+                            <button class="add-to-cart-btn bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg transition-colors" data-product-id="${product.id}">
+                                <i class="fas fa-cart-plus"></i>
+                            </button>`;
+                    }
+                    
+                    container.innerHTML = newHTML;
+                });
+                 addCardEventListeners();
+            }
+            
+            function showCartNotification(productId) {
+                const product = allProducts.find(p => p.id === productId);
+                if (!product) return;
+                const notification = document.createElement('div');
+                notification.className = 'fixed bottom-5 right-5 bg-emerald-600 text-white py-2 px-4 rounded-lg shadow-lg z-50 fade-in';
+                notification.innerHTML = `<i class="fas fa-check-circle mr-2"></i><strong>${product.produto}</strong> adicionado ao carrinho!`;
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => notification.remove(), 500);
+                }, 2500);
+            }
+
+            function updateCart() {
+                const itemCount = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+                cartCount.textContent = itemCount;
+                cartCount.classList.toggle('hidden', itemCount === 0);
+                
+                cartItemsContainer.innerHTML = '';
+                let total = 0;
+
+                if (itemCount === 0) {
+                    cartEmptyMsg.style.display = 'block';
+                    checkoutBtn.disabled = true;
+                } else {
+                    cartEmptyMsg.style.display = 'none';
+                    checkoutBtn.disabled = false;
+                    
+                    const groupedCart = {};
+                    for (const productId in cart) {
+                        const product = allProducts.find(p => p.id === productId);
+                        if (product) {
+                            const banca = product.banca || 'Outros';
+                            if (!groupedCart[banca]) groupedCart[banca] = [];
+                            groupedCart[banca].push(product);
+                            total += product.preco_venda * cart[productId];
+                        }
+                    }
+
+                    const sortedBancas = Object.keys(groupedCart).sort();
+                    for(const banca of sortedBancas) {
+                        const groupDiv = document.createElement('div');
+                        groupDiv.className = 'mb-4 last:mb-0';
+                        let groupHTML = `<h3 class="font-bold text-slate-600 border-b pb-1 mb-2">${banca}</h3>`;
+                        for(const product of groupedCart[banca]) {
+                            groupHTML += createCartItemHTML(product, cart[product.id]);
+                        }
+                        groupDiv.innerHTML = groupHTML;
+                        cartItemsContainer.appendChild(groupDiv);
+                    }
+                }
+                
+                cartTotalEl.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                addCartItemEventListeners();
+            }
+
+            function createCartItemHTML(product, quantity) {
+                const totalPrice = (product.preco_venda * quantity).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                return `
+                    <div class="flex items-center gap-4 py-3">
+                        <img src="${product.images[0] || 'https://placehold.co/64x64/e2e8f0/475569?text=Img'}" alt="${product.produto}" class="w-16 h-16 object-cover rounded-md">
+                        <div class="flex-grow">
+                            <p class="font-semibold">${product.produto}</p>
+                            <p class="text-sm text-slate-500">${totalPrice}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="cart-quantity-btn" data-product-id="${product.id}" data-action="decrease">-</button>
+                            <span class="w-8 text-center font-bold">${quantity}</span>
+                            <button class="cart-quantity-btn" data-product-id="${product.id}" data-action="increase">+</button>
+                        </div>
+                        <button class="cart-remove-btn text-red-500 hover:text-red-700 text-xl" data-product-id="${product.id}">&times;</button>
+                    </div>
+                `;
+            }
+
+            function openCart() {
+                cartSidebar.classList.remove('translate-x-full');
+                cartSidebar.classList.add('slide-in-right');
+            }
+
+            function closeCart() {
+                cartSidebar.classList.add('slide-out-right');
+                setTimeout(() => {
+                    cartSidebar.classList.add('translate-x-full');
+                    cartSidebar.classList.remove('slide-in-right', 'slide-out-right');
+                }, 300);
+            }
+            
+            // --- MODAL & CHECKOUT LOGIC ---
+            function openInfoModal() {
+                infoModal.classList.remove('hidden');
+            }
+
+            function closeInfoModal() {
+                infoModal.classList.add('fade-out');
+                setTimeout(() => {
+                    infoModal.classList.add('hidden');
+                    infoModal.classList.remove('fade-out');
+                }, 300);
+            }
+
+            function openCheckoutModal() {
+                closeCart();
+                
+                let onlyPerolaDaTerra = true;
+                for (const productId in cart) {
+                    const product = allProducts.find(p => p.id === productId);
+                    if (product && product.banca !== 'Pérola da Terra') {
+                        onlyPerolaDaTerra = false;
+                        break;
+                    }
+                }
+
+                if (onlyPerolaDaTerra) {
+                    retiradaOptionLabel.style.display = 'flex';
+                    retiradaOptionLabel.querySelector('input').checked = true;
+                    pickupPersonContainer.style.maxHeight = '100px';
+                    pickupPersonContainer.style.opacity = '1';
+                    pickupPersonContainer.style.overflow = 'visible';
+                } else {
+                    retiradaOptionLabel.style.display = 'none';
+                    teleEntregaRadio.checked = true;
+                    pickupPersonContainer.style.maxHeight = '0';
+                    pickupPersonContainer.style.opacity = '0';
+                    pickupPersonContainer.style.overflow = 'hidden';
+                }
+
+                checkoutModal.classList.remove('hidden');
+            }
+
+            function closeCheckoutModal() {
+                checkoutModal.classList.add('fade-out');
+                setTimeout(() => {
+                    checkoutModal.classList.add('hidden');
+                    checkoutModal.classList.remove('fade-out');
+                }, 300);
+            }
+            
+            function handleCheckout(formData) {
+                if (Object.keys(cart).length === 0) return;
+
+                let message = "Olá! Gostaria de fazer um novo pedido! 🛒\n\n";
+                message += `*Cliente:* ${formData.name}\n`;
+                message += `*Telefone:* ${formData.phone}\n\n`;
+                message += `*Opção de Entrega:* ${formData.deliveryOptionText}\n`;
+                if (formData.deliveryOption === 'retirada' && formData.pickupPerson) {
+                    message += `*Quem retira:* ${formData.pickupPerson}\n`;
+                }
+                message += `*Forma de Pagamento:* ${formData.paymentMethod}\n`;
+                message += `-----------------------------------\n`;
+
+                let total = 0;
+                const groupedCart = {};
+                for (const productId in cart) {
+                    const product = allProducts.find(p => p.id === productId);
+                    if (product) {
+                        const banca = product.banca || 'Outros';
+                        if (!groupedCart[banca]) groupedCart[banca] = [];
+                        groupedCart[banca].push(product);
+                    }
+                }
+
+                const sortedBancas = Object.keys(groupedCart).sort();
+                for (const banca of sortedBancas) {
+                    message += `\n*${banca}*\n`;
+                    for (const product of groupedCart[banca]) {
+                        const quantity = cart[product.id];
+                        const subtotal = product.preco_venda * quantity;
+                        total += subtotal;
+                        message += `- ${quantity}x _${product.produto}_ - ${subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}\n`;
+                    }
+                }
+                
+                message += `-----------------------------------\n`;
+                message += `\n*Total do Pedido:* 💰 *${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}*`;
+
+                const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+                closeCheckoutModal();
+            }
+
+
+            // --- EVENT LISTENERS ---
+            function addCardEventListeners(containerSelector = '') {
+                const container = containerSelector ? document.querySelector(containerSelector) : document;
+
+                container.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        const productId = e.currentTarget.dataset.productId;
+                        handleCartQuantityChange(productId, 'increase');
+                        showCartNotification(productId);
+                    };
+                });
+
+                container.querySelectorAll('.card-quantity-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        handleCartQuantityChange(e.currentTarget.dataset.productId, e.currentTarget.dataset.action);
+                    };
+                });
+                
+                container.querySelectorAll('.product-card-clickable').forEach(card => {
+                    card.onclick = (e) => openProductModal(e.currentTarget.dataset.productId);
+                });
+
+                container.querySelectorAll('.carousel-btn').forEach(button => {
+                    button.onclick = (e) => {
+                        e.stopPropagation();
+                        const action = e.currentTarget.dataset.action;
+                        const carousel = e.currentTarget.closest('.carousel-container');
+                        const slides = carousel.querySelectorAll('.carousel-slide');
+                        let activeIndex = Array.from(slides).findIndex(slide => slide.classList.contains('active'));
+                        slides[activeIndex].classList.remove('active');
+                        if (action === 'next') {
+                            activeIndex = (activeIndex + 1) % slides.length;
+                        } else {
+                            activeIndex = (activeIndex - 1 + slides.length) % slides.length;
+                        }
+                        slides[activeIndex].classList.add('active');
+                    };
+                });
+            }
+            
+            function addCartItemEventListeners() {
+                document.querySelectorAll('.cart-quantity-btn').forEach(btn => {
+                    btn.onclick = (e) => handleCartQuantityChange(e.currentTarget.dataset.productId, e.currentTarget.dataset.action);
+                });
+                document.querySelectorAll('.cart-remove-btn').forEach(btn => {
+                    btn.onclick = (e) => handleCartQuantityChange(e.currentTarget.dataset.productId, 'remove');
+                });
+            }
+
+            function setActiveGroupButton(activeBtnId) {
+                const buttons = [
+                    { el: groupByCategoriaBtn, id: 'group-by-categoria' },
+                    { el: groupByBancaBtn, id: 'group-by-banca' }
+                ];
+                buttons.forEach(btnInfo => {
+                    const isActive = btnInfo.id === activeBtnId;
+                    btnInfo.el.classList.toggle('bg-emerald-600', isActive);
+                    btnInfo.el.classList.toggle('text-white', isActive);
+                    btnInfo.el.classList.toggle('hover:bg-emerald-700', isActive);
+                    
+                    btnInfo.el.classList.toggle('bg-white', !isActive);
+                    btnInfo.el.classList.toggle('text-slate-700', !isActive);
+                    btnInfo.el.classList.toggle('hover:bg-slate-100', !isActive);
+                });
+            }
+
+            // Initial setup of event listeners
+            searchInput.addEventListener('input', renderProducts);
+            
+            groupByCategoriaBtn.addEventListener('click', () => {
+                currentGrouping = 'categoria';
+                setActiveGroupButton('group-by-categoria');
+                renderProducts();
+            });
+
+            groupByBancaBtn.addEventListener('click', () => {
+                currentGrouping = 'banca';
+                setActiveGroupButton('group-by-banca');
+                renderProducts();
+            });
+            
+            // Modal listeners
+            productModal.addEventListener('click', (e) => { if (e.target === productModal) closeProductModal(); });
+            infoModalCloseBtn.addEventListener('click', closeInfoModal);
+            infoModal.addEventListener('click', (e) => { if (e.target === infoModal) closeInfoModal(); });
+            
+            // Cart listeners
+            cartButton.addEventListener('click', openCart);
+            cartCloseBtn.addEventListener('click', closeCart);
+            checkoutBtn.addEventListener('click', openCheckoutModal);
+
+            // Checkout Modal listeners
+            checkoutModalCloseBtn.addEventListener('click', closeCheckoutModal);
+            checkoutModal.addEventListener('click', (e) => { if (e.target === checkoutModal) closeCheckoutModal(); });
+            deliveryOptionRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    if (radio.value === 'retirada') {
+                        pickupPersonContainer.style.maxHeight = '100px';
+                        pickupPersonContainer.style.opacity = '1';
+                        pickupPersonContainer.style.overflow = 'visible';
+                    } else {
+                        pickupPersonContainer.style.maxHeight = '0';
+                        pickupPersonContainer.style.opacity = '0';
+                        pickupPersonContainer.style.overflow = 'hidden';
+                    }
+                });
+            });
+            checkoutForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const deliveryOption = formData.get('delivery-option');
+                const deliveryOptionText = deliveryOption === 'retirada' ? 'Vou retirar na banca' : 'Quero tele-entrega';
+                
+                const data = {
+                    name: formData.get('customer-name'),
+                    phone: formData.get('customer-phone'),
+                    deliveryOption: deliveryOption,
+                    deliveryOptionText: deliveryOptionText,
+                    pickupPerson: formData.get('pickup-person-name'),
+                    paymentMethod: formData.get('payment-method'),
+                };
+                handleCheckout(data);
+            });
+
+
+            // --- INITIALIZATION ---
+            fetchAndParseData();
+            updateCart();
+            
+            // Show info modal once per session
+            if (!sessionStorage.getItem('infoModalShown')) {
+                openInfoModal();
+                sessionStorage.setItem('infoModalShown', 'true');
+            }
+        });
+    </script>
+</body>
+</html>
